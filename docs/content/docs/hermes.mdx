@@ -1,9 +1,46 @@
 ---
 title: Hermes Agent
-description: Give Hermes a native headroom_retrieve tool so compression markers are reversible, via the bundled hermes plugin.
+description: Compress Hermes tool results locally while preserving native Copilot subscription authentication, or retrieve content from a separately configured proxy.
 ---
 
-Hermes Agent registers its own tools, so unlike Claude Code it does not automatically receive the `headroom_retrieve` MCP tool. The bundled [`plugins/hermes`](https://github.com/headroomlabs-ai/headroom/tree/main/plugins/hermes) plugin closes that loop: it gives Hermes a native `headroom_retrieve` tool that calls the proxy's `POST /v1/retrieve` endpoint directly, so compression markers like `<<ccr:abc123>>` are no longer a black box.
+## Native compression with a Copilot subscription
+
+The bundled `plugins/hermes/headroom_compress` plugin uses Hermes's supported
+`llm_request` middleware to compress outgoing tool-result text with Headroom's
+local, verified-lossless `densify()` pipeline. Keep your existing Copilot provider,
+subscription login and model. No proxy, new provider API key or Hermes source
+change is required. There is no `headroom wrap hermes` command.
+
+1. Install `headroom-ai>=0.41.0` in the Python environment that runs Hermes using
+   your installation's package-management workflow. A separately installed
+   Headroom CLI does not satisfy this requirement.
+2. Copy `plugins/hermes/headroom_compress` into the active Hermes profile's
+   `plugins` directory (`$HERMES_HOME/plugins`, or `~/.hermes/plugins` by default).
+3. Enable and check the plugin:
+
+   ```bash
+   hermes plugins enable headroom_compress
+   hermes plugins doctor headroom_compress
+   ```
+
+   For a named profile, add `-p <profile>` to both commands.
+4. Start a fresh Hermes session. Leave `model.provider: copilot` unchanged.
+
+String tool results are supported in Chat Completions, Responses and Anthropic
+Messages requests. User/assistant/system content, tool-call IDs, reasoning,
+streaming, credentials and endpoints are unchanged. Structured/multimodal results
+and Anthropic error results pass through. Original session history is never
+rewritten. Compression failures pass through unchanged. Lossless mode downloads
+no models and emits no CCR markers, so `headroom_retrieve` is not required.
+Savings appear as `Headroom saved N tool-result tokens` in Hermes logs.
+
+Requires Hermes's `register_middleware("llm_request", ...)` plugin API. Copilot ACP
+(external CLI transport) is not covered. Disable with
+`hermes plugins disable headroom_compress`, then start a fresh session.
+
+## Optional proxy retrieval
+
+When routing through a separately configured proxy, Hermes Agent does not automatically receive the `headroom_retrieve` MCP tool. The bundled [`plugins/hermes`](https://github.com/headroomlabs-ai/headroom/tree/main/plugins/hermes) retrieval plugin gives Hermes a native `headroom_retrieve` tool that calls the proxy's `POST /v1/retrieve` endpoint directly, so compression markers like `<<ccr:abc123>>` are no longer a black box.
 
 Without it, the model tends to re-run the original command (wasting tokens and time) or treat `ccr:abc123` as a file path and try to `cat` it.
 

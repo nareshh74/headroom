@@ -1,0 +1,8 @@
+name: headroom_compress
+version: 1.0.0
+description: "Lossless local tool-result compression; preserves Hermes provider and subscription auth"
+author: Headroom Contributors
+python_dependencies:
+  - headroom-ai>=0.41.0,<1.0
+provides_middleware:
+  - llm_request
